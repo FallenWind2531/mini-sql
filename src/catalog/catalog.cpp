@@ -220,12 +220,23 @@ dberr_t CatalogManager::CreateIndex(const std::string &table_name, const string 
   index_names_[table_name][index_name] = index_id;
   indexes_[index_id] = index_info;
 
-  // TableIterator iter = table_info->GetTableHeap()->Begin(txn);
-  // while (iter != table_info->GetTableHeap()->End()) {
-  //   const Row &row = *iter;
-  //   index_info->GetIndex()->InsertEntry(row, row.GetRowId(), txn);
-  //   ++iter;
-  // }
+  std::vector<uint32_t> keys(index_keys.size());
+  for (size_t i = 0; i < index_keys.size(); i++) {
+    if (schema->GetColumnIndex(index_keys[i], keys[i]) == DB_COLUMN_NAME_NOT_EXIST) {
+      return DB_COLUMN_NAME_NOT_EXIST;
+    }
+  }
+
+  auto table_heap = table_info->GetTableHeap();
+  vector<Field> f;
+  for (auto it = table_heap->Begin(nullptr); it != table_heap->End(); it++) {
+    f.clear();
+    for (auto pos : keys) {
+      f.push_back(*(it->GetField(pos)));
+    }
+    Row row(f);
+    index_info->GetIndex()->InsertEntry(row, it->GetRowId(), nullptr);
+  }
 
   FlushCatalogMetaPage();
 

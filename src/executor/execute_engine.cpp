@@ -673,25 +673,15 @@ dberr_t ExecuteEngine::ExecuteDropIndex(pSyntaxNode ast, ExecuteContext *context
     return DB_FAILED;
   }
 
+  auto clm = context->GetCatalog();
   string index_name = ast->child_->val_;
-  string table_name = ast->child_->next_->val_;
-
-  TableInfo *table_info = nullptr;
-  if (dbs_[current_db_]->catalog_mgr_->GetTable(table_name, table_info) != DB_SUCCESS) {
-    return DB_TABLE_NOT_EXIST;
-  }
-  IndexInfo *index_info = nullptr;
-  if (dbs_[current_db_]->catalog_mgr_->GetIndex(table_name, index_name, index_info) != DB_SUCCESS) {
-    return DB_INDEX_NOT_FOUND;
-  }
-
-  dberr_t result = dbs_[current_db_]->catalog_mgr_->DropIndex(table_name, index_name);
-  if (result != DB_SUCCESS) {
-    return result;
-  }
-
-  cout << "Index '" << index_name << "' dropped from table '" << table_name << "'." << endl;
-  return DB_SUCCESS;
+  vector<TableInfo*>tables;
+  auto res=DB_INDEX_NOT_FOUND;
+  clm->GetTables(tables);
+  for(auto it:tables)
+    if(clm->DropIndex(it->GetTableName(),index_name)==DB_SUCCESS)res=DB_SUCCESS;
+  cout << "Index '" << index_name << "' dropped " << endl;
+  return res;
 }
 
 dberr_t ExecuteEngine::ExecuteTrxBegin(pSyntaxNode ast, ExecuteContext *context) {
